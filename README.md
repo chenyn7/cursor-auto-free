@@ -19,6 +19,9 @@
 - 本项目仅供学习交流使用，请勿用于商业用途。
 - 本项目不承担任何法律责任，使用本项目造成的任何后果，由使用者自行承担。
 
+## macOS 直接运行脚本
+双击运行 `run.mac.command`（或在终端执行 `./run.mac.command`）即可自动创建虚拟环境、安装依赖并启动脚本。
+
 ## 特别鸣谢
 本项目的开发过程中得到了众多开源项目和社区成员的支持与帮助，在此特别感谢：
 
@@ -26,5 +29,4 @@
 <!-- <img src="./screen/image.png" width="300"/>
 <img src="./screen/28613e3f3f23a935b66a7ba31ff4e3f.jpg" width="300"/>
 <img src="./screen/mm_facetoface_collect_qrcode_1738583247120.png" width="300"/> -->
-
 

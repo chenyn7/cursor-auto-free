@@ -1,15 +1,8 @@
 import os
-import platform
-import json
-import sys
-from colorama import Fore, Style
 from enum import Enum
 from typing import Optional
 
 from exit_cursor import ExitCursor
-import go_cursor_help
-import patch_cursor_get_machine_id
-from reset_machine import MachineIDResetter
 from language import language, get_translation
 
 os.environ["PYTHONVERBOSE"] = "0"
@@ -18,13 +11,11 @@ os.environ["PYINSTALLER_VERBOSE"] = "0"
 import time
 import random
 from cursor_auth_manager import CursorAuthManager
-import os
 from logger import logging
 from browser_utils import BrowserManager
 from get_email_code import EmailVerificationHandler
 from logo import print_logo
 from config import Config
-from datetime import datetime
 
 # Define EMOJI dictionary
 EMOJI = {"ERROR": get_translation("error"), "WARNING": get_translation("warning"), "INFO": get_translation("info")}
@@ -378,22 +369,6 @@ def get_user_agent():
         return None
 
 
-def check_cursor_version():
-    """Check cursor version"""
-    pkg_path, main_path = patch_cursor_get_machine_id.get_cursor_paths()
-    with open(pkg_path, "r", encoding="utf-8") as f:
-        version = json.load(f)["version"]
-    return patch_cursor_get_machine_id.version_check(version, min_version="0.45.0")
-
-
-def reset_machine_id(greater_than_0_45):
-    if greater_than_0_45:
-        # Prompt to manually execute script https://github.com/chengazhen/cursor-auto-free/blob/main/patch_cursor_get_machine_id.py
-        go_cursor_help.go_cursor_help()
-    else:
-        MachineIDResetter().reset_machine_ids()
-
-
 def print_end_message():
     logging.info("\n\n\n\n\n")
     logging.info("=" * 30)
@@ -414,33 +389,10 @@ if __name__ == "__main__":
     print("\n")
     language.select_language_prompt()
     
-    greater_than_0_45 = check_cursor_version()
     browser_manager = None
     try:
         logging.info(get_translation("initializing_program"))
         ExitCursor()
-
-        # Prompt user to select operation mode
-        print(get_translation("select_operation_mode"))
-        print(get_translation("reset_machine_code_only"))
-        print(get_translation("complete_registration"))
-
-        while True:
-            try:
-                choice = int(input(get_translation("enter_option")).strip())
-                if choice in [1, 2]:
-                    break
-                else:
-                    print(get_translation("invalid_option"))
-            except ValueError:
-                print(get_translation("enter_valid_number"))
-
-        if choice == 1:
-            # Only reset machine code
-            reset_machine_id(greater_than_0_45)
-            logging.info(get_translation("machine_code_reset_complete"))
-            print_end_message()
-            sys.exit(0)
 
         logging.info(get_translation("initializing_browser"))
 
@@ -502,8 +454,6 @@ if __name__ == "__main__":
                 logging.info(
                     "Please visit the open source project for more information: https://github.com/chengazhen/cursor-auto-free"
                 )
-                logging.info(get_translation("resetting_machine_code"))
-                reset_machine_id(greater_than_0_45)
                 logging.info(get_translation("all_operations_completed"))
                 print_end_message()
             else:
