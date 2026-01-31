@@ -1,0 +1,181 @@
+From d73f7a31d577021d2529ff58c3fd492fbd7e47f1 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 31 Jan 2026 07:50:33 +0000
+Subject: [PATCH] Remove machine-ID reset flow from keep-alive and add macOS
+ runner
+
+### Motivation
+
+- Make the main automation flow safe to run on macOS without modifying local Cursor machine identifiers.
+- Provide a simple, double-clickable macOS entrypoint that creates a virtualenv, installs deps and launches the script.
+
+### Description
+
+- Removed machine-ID related imports and flows from `cursor_pro_keep_alive.py`, including references to `patch_cursor_get_machine_id`, `go_cursor_help`, `reset_machine`, `check_cursor_version`, and the interactive "reset machine code" menu.
+- Removed the call that reset local machine identifiers after registration so the keep-alive/registration flow runs without modifying local machine IDs.
+- Added `run.mac.command` which creates/activates a `venv`, installs `requirements.txt`, and runs `cursor_pro_keep_alive.py` for a macOS-friendly launcher.
+- Updated `README.md` with instructions for running `run.mac.command` on macOS and removed unused imports to clean up the main script.
+
+### Testing
+
+- No automated tests were run for this change.
+---
+ README.md                |  4 +++-
+ cursor_pro_keep_alive.py | 50 ----------------------------------------
+ run.mac.command          | 24 +++++++++++++++++++
+ 3 files changed, 27 insertions(+), 51 deletions(-)
+ create mode 100755 run.mac.command
+
+diff --git a/README.md b/README.md
+index 632625f..cbfbfb8 100644
+--- a/README.md
++++ b/README.md
+@@ -19,6 +19,9 @@
+ - 本项目仅供学习交流使用，请勿用于商业用途。
+ - 本项目不承担任何法律责任，使用本项目造成的任何后果，由使用者自行承担。
+ 
++## macOS 直接运行脚本
++双击运行 `run.mac.command`（或在终端执行 `./run.mac.command`）即可自动创建虚拟环境、安装依赖并启动脚本。
++
+ ## 特别鸣谢
+ 本项目的开发过程中得到了众多开源项目和社区成员的支持与帮助，在此特别感谢：
+ 
+@@ -27,4 +30,3 @@
+ <img src="./screen/28613e3f3f23a935b66a7ba31ff4e3f.jpg" width="300"/>
+ <img src="./screen/mm_facetoface_collect_qrcode_1738583247120.png" width="300"/> -->
+ 
+-
+diff --git a/cursor_pro_keep_alive.py b/cursor_pro_keep_alive.py
+index 2bfd6d6..dd4dbd9 100644
+--- a/cursor_pro_keep_alive.py
++++ b/cursor_pro_keep_alive.py
+@@ -1,15 +1,8 @@
+ import os
+-import platform
+-import json
+-import sys
+-from colorama import Fore, Style
+ from enum import Enum
+ from typing import Optional
+ 
+ from exit_cursor import ExitCursor
+-import go_cursor_help
+-import patch_cursor_get_machine_id
+-from reset_machine import MachineIDResetter
+ from language import language, get_translation
+ 
+ os.environ["PYTHONVERBOSE"] = "0"
+@@ -18,13 +11,11 @@ os.environ["PYINSTALLER_VERBOSE"] = "0"
+ import time
+ import random
+ from cursor_auth_manager import CursorAuthManager
+-import os
+ from logger import logging
+ from browser_utils import BrowserManager
+ from get_email_code import EmailVerificationHandler
+ from logo import print_logo
+ from config import Config
+-from datetime import datetime
+ 
+ # Define EMOJI dictionary
+ EMOJI = {"ERROR": get_translation("error"), "WARNING": get_translation("warning"), "INFO": get_translation("info")}
+@@ -378,22 +369,6 @@ def get_user_agent():
+         return None
+ 
+ 
+-def check_cursor_version():
+-    """Check cursor version"""
+-    pkg_path, main_path = patch_cursor_get_machine_id.get_cursor_paths()
+-    with open(pkg_path, "r", encoding="utf-8") as f:
+-        version = json.load(f)["version"]
+-    return patch_cursor_get_machine_id.version_check(version, min_version="0.45.0")
+-
+-
+-def reset_machine_id(greater_than_0_45):
+-    if greater_than_0_45:
+-        # Prompt to manually execute script https://github.com/chengazhen/cursor-auto-free/blob/main/patch_cursor_get_machine_id.py
+-        go_cursor_help.go_cursor_help()
+-    else:
+-        MachineIDResetter().reset_machine_ids()
+-
+-
+ def print_end_message():
+     logging.info("\n\n\n\n\n")
+     logging.info("=" * 30)
+@@ -414,34 +389,11 @@ if __name__ == "__main__":
+     print("\n")
+     language.select_language_prompt()
+     
+-    greater_than_0_45 = check_cursor_version()
+     browser_manager = None
+     try:
+         logging.info(get_translation("initializing_program"))
+         ExitCursor()
+ 
+-        # Prompt user to select operation mode
+-        print(get_translation("select_operation_mode"))
+-        print(get_translation("reset_machine_code_only"))
+-        print(get_translation("complete_registration"))
+-
+-        while True:
+-            try:
+-                choice = int(input(get_translation("enter_option")).strip())
+-                if choice in [1, 2]:
+-                    break
+-                else:
+-                    print(get_translation("invalid_option"))
+-            except ValueError:
+-                print(get_translation("enter_valid_number"))
+-
+-        if choice == 1:
+-            # Only reset machine code
+-            reset_machine_id(greater_than_0_45)
+-            logging.info(get_translation("machine_code_reset_complete"))
+-            print_end_message()
+-            sys.exit(0)
+-
+         logging.info(get_translation("initializing_browser"))
+ 
+         # Get user_agent
+@@ -502,8 +454,6 @@ if __name__ == "__main__":
+                 logging.info(
+                     "Please visit the open source project for more information: https://github.com/chengazhen/cursor-auto-free"
+                 )
+-                logging.info(get_translation("resetting_machine_code"))
+-                reset_machine_id(greater_than_0_45)
+                 logging.info(get_translation("all_operations_completed"))
+                 print_end_message()
+             else:
+diff --git a/run.mac.command b/run.mac.command
+new file mode 100755
+index 0000000..b07b02f
+--- /dev/null
++++ b/run.mac.command
+@@ -0,0 +1,24 @@
++#!/bin/bash
++set -euo pipefail
++
++export PYTHONWARNINGS=ignore::SyntaxWarning:DrissionPage
++
++cd "$(dirname "$0")"
++
++if [ ! -d "venv" ]; then
++    echo "Creating virtual environment..."
++    python3 -m venv venv
++fi
++
++source venv/bin/activate
++
++echo "Installing dependencies..."
++python -m pip install --upgrade pip
++pip install -r requirements.txt
++
++echo "Starting Cursor automation..."
++python cursor_pro_keep_alive.py
++
++echo "Completed."
++echo "Press any key to exit..."
++read -n 1
+-- 
+2.43.0
+
